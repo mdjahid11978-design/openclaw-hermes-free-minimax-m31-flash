@@ -80,7 +80,12 @@ else
 fi
 
 echo "==> Pushing"
-git push -u "https://$OWNER:$GITHUB_TOKEN@github.com/$OWNER/$REPO_NAME.git" "$BRANCH"
+# Use the gh credential helper rather than a token-bearing URL — embedding the
+# token in the remote URL would write it in plain text into .git/config.
+gh auth setup-git >/dev/null 2>&1 || true
+git remote add origin "https://github.com/$OWNER/$REPO_NAME.git" 2>/dev/null \
+  || git remote set-url origin "https://github.com/$OWNER/$REPO_NAME.git"
+git push -u origin "$BRANCH"
 
 echo
 echo "Done: https://github.com/$OWNER/$REPO_NAME"
