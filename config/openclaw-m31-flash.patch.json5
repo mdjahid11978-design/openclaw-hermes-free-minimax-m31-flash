@@ -1,0 +1,33 @@
+{
+  models: {
+    providers: {
+      nvidia: {
+        baseUrl: "https://integrate.api.nvidia.com/v1",
+        api: "openai-completions",
+        models: [
+          {
+            id: "minimaxai/minimax-m3.1-flash",
+            name: "MiniMax M3.1 Flash",
+            reasoning: true,
+            input: ["text", "image"],
+            contextWindow: 1000000,
+            maxTokens: 131072,
+            compat: { codeMode: "preferred" }
+          }
+        ]
+      }
+    }
+  },
+  agents: {
+    defaults: {
+      models: {
+        "nvidia/minimaxai/minimax-m3.1-flash": { alias: "minimax" }
+      },
+      model: {
+        primary: "nvidia/minimaxai/minimax-m3.1-flash",
+        fallbacks: []
+      },
+      utilityModel: "nvidia/minimaxai/minimax-m3.1-flash"
+    }
+  }
+}

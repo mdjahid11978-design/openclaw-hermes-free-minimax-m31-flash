@@ -1,0 +1,43 @@
+# Secrets — never commit real keys
+*.env
+.env
+.env.*
+!.env.example
+nvapi-*
+secrets/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# OpenClaw / Hermes runtime state
+.openclaw/
+.openclaw-state/
+.hermes/
+openclaw.json
+openclaw.json.bak
+state.db
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# Build artifacts
+dist/
+build/
+*.tgz
+*.tar.xz
