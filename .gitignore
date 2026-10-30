@@ -41,3 +41,6 @@ dist/
 build/
 *.tgz
 *.tar.xz
+
+# Local bundle artifacts
+*.tar.gz
