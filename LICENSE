@@ -20,12 +20,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
----
-
-NOTE ON THE MODEL
-
-This project configures third-party agents to run the MiniMax-M3.1-Flash model
-through the NVIDIA NIM hosted catalog. Those services are governed by their own
-terms (NVIDIA API Trial Terms of Service; NVIDIA Software and Model Evaluation
-License) and by the MiniMax Community License for the base model. This license
-covers only the scripts and documentation in this repository.

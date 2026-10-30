@@ -226,8 +226,10 @@ With a real key the same commands return normal completions.
 │   └── run-hermes.sh         # Hermes launcher
 ├── config/
 │   └── openclaw-m31-flash.patch.json5   # model pin, applied on every launch
-└── docs/
-    └── index.html            # full visual setup report
+├── docs/
+│   └── index.html            # full visual setup report
+├── NOTICE.md                 # third-party model + endpoint terms
+└── LICENSE                   # MIT (this repo's code only)
 ```
 
 ---
@@ -247,6 +249,8 @@ For production or business-critical workloads, use a paid route.
 
 **Built by [Jahid](https://github.com/mdjahid11978-design)** — AI Agent Developer & Full Stack
 Engineer building the future of automation with OpenClaw, Web3, and modern web technologies.
+
+See [NOTICE.md](NOTICE.md) for the model and endpoint terms.
 
 | | |
 |---|---|
