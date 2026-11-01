@@ -13,7 +13,7 @@ class NvidiaNimAdapter:
         key = os.getenv("NVIDIA_API_KEY")
         if not key:
             raise AdapterError("NVIDIA_API_KEY is not configured")
-        body = json.dumps({"model":os.getenv("JAHIDS_NIM_MODEL","minimaxai/minimax-m3.1"),"messages":[{"role":"user","content":prompt}],"temperature":0.2,"max_tokens":2048}).encode()
+        body = json.dumps({"model":os.getenv("JAHIDS_NIM_MODEL","minimaxai/minimax-m3.1-flash"),"messages":[{"role":"user","content":prompt}],"temperature":0.2,"max_tokens":2048}).encode()
         req = urllib.request.Request(os.getenv("NVIDIA_BASE_URL","https://integrate.api.nvidia.com/v1") + "/chat/completions", data=body, headers={"Authorization":"Bearer " + key,"Content-Type":"application/json"}, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=90) as response:
