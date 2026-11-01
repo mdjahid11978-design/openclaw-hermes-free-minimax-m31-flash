@@ -54,12 +54,11 @@ class MissionService:
         if not decision.allowed:
             self._audit("execution_denied", mission, decision.reason)
             return {"mission":mission,"decision":decision.__dict__}
-        claimed=self.store.claim_approved(mission_id,approval_id)
+        claimed=self.store.claim_approved_with_audit(mission_id,approval_id)
         if not claimed:
             current = self.store.get(mission_id)
             self._audit("execution_denied", current, "approval_used_or_expired")
             return {"mission":current,"decision":{"allowed":False,"reason":"approval_used_or_expired"}}
-        self._audit("execution_started", claimed)
         try:
             result=self.adapters.run(mission["provider"],mission["prompt"])
         except Exception as exc:
