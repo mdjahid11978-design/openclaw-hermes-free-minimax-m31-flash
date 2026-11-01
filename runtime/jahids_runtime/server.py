@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .auth import OwnerAuthenticator
+from .email import EmailConfigurationError, EmailDeliveryError, SmtpMailer
 from .service import MissionService
 
 
@@ -110,6 +111,20 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             body = self.body()
+            if path == "/v1/email/send":
+                try:
+                    result = SmtpMailer().send(
+                        body.get("to", ""),
+                        body.get("subject", ""),
+                        body.get("text", ""),
+                    )
+                    return self.send_json(200, result)
+                except PermissionError as exc:
+                    return self.send_json(403, {"error": str(exc)})
+                except EmailConfigurationError as exc:
+                    return self.send_json(503, {"error": str(exc)})
+                except (ValueError, EmailDeliveryError) as exc:
+                    return self.send_json(400 if isinstance(exc, ValueError) else 502, {"error": str(exc)})
             if path == "/v1/missions":
                 mission = self.service.create(
                     body.get("provider", "nvidia-nim"),
