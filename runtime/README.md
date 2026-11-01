@@ -25,7 +25,8 @@ Adapter labels are configuration summaries, not live process probes. Activity is
 - Approvals bind to provider, prompt, and category; expire after 10 minutes and can be consumed once.
 - OpenClaw/Hermes process execution is disabled unless explicitly enabled.
 - Default listener is loopback. Docker publishes the service on host loopback.
-- Provider secrets are not stored in SQLite.
+- Provider and SMTP credentials are not stored in SQLite.
+- SMTP delivery is optional, owner-authenticated, and limited to exact recipient addresses in an environment allowlist.
 
 Read Authentication and Ownership, the Control Center guide, and SECURITY.md before enabling execution.
 
@@ -77,8 +78,22 @@ Every route under /v1 requires:
 - POST /v1/missions — create a mission.
 - POST /v1/missions/{id}/approve — request Governor approval.
 - POST /v1/missions/{id}/execute — execute with the returned approval ID.
+- POST /v1/email/send — send plain-text mail through the configured SMTP relay; recipient must appear in `JAHIDS_EMAIL_ALLOWED_RECIPIENTS`.
 
-The owner token is separate from NVIDIA_API_KEY. Never reuse one for the other. Rotate the owner token by stopping the service, replacing the secret, and restarting.
+The owner token is separate from NVIDIA_API_KEY and SMTP credentials. Never reuse one for another. Rotate the owner token by stopping the service, replacing the secret, and restarting.
+
+## Business email relay
+
+This repository integrates with an SMTP provider; it does not create or host mailboxes or control DNS. Configure a mailbox and SMTP relay with your chosen provider, then set `JAHIDS_SMTP_HOST`, `JAHIDS_SMTP_PORT`, `JAHIDS_SMTP_SECURITY` (`ssl` or `starttls`), `JAHIDS_SMTP_USERNAME`, `JAHIDS_SMTP_PASSWORD`, `JAHIDS_EMAIL_FROM`, and a comma-separated exact-address `JAHIDS_EMAIL_ALLOWED_RECIPIENTS` in the protected environment file. The API endpoint requires the owner bearer token. Do not put SMTP credentials in browser code, GitHub, or the image.
+
+Example request:
+
+    curl -X POST http://127.0.0.1:8787/v1/email/send \\
+      -H 'Authorization: Bearer YOUR_OWNER_TOKEN' \\
+      -H 'Content-Type: application/json' \\
+      -d '{"to":"owner@example.com","subject":"Test","text":"JAHIDS.AI email test"}'
+
+The address above is an example only. Configure the real sender and recipient allowlist with your mail provider first.
 
 ## Mission lifecycle
 
