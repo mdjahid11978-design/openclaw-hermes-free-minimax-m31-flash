@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# setup.sh — install OpenClaw + Hermes Agent, both on FREE MiniMax M3.1 Flash.
+# setup.sh — install OpenClaw + Hermes Agent with MiniMax M3.1 Flash via NVIDIA NIM.
 #
 # Built by Jahid — AI Agent Developer & Full Stack Engineer
 #   github.com/mdjahid11978-design
@@ -9,15 +9,15 @@
 #   1. Installs Node 24 (required by OpenClaw >= 2026.10) under $HOME/tools
 #   2. Installs OpenClaw (npm, latest stable)
 #   3. Installs Hermes Agent (official installer, stable channel)
-#   4. Points both at minimaxai/minimax-m3.1-flash on NVIDIA NIM's free tier
+#   4. Configures both for minimaxai/minimax-m3.1-flash on NVIDIA NIM
 #   5. Verifies both resolve to the model
 #
 # Usage
 #   ./setup.sh              # full install
 #   ./setup.sh --verify     # just verify an existing install
 #
-# You still need ONE free key for the model itself:
-#   https://build.nvidia.com/settings/api-keys   (no credit card required)
+# You need an NVIDIA API key for model access:
+#   https://build.nvidia.com/settings/api-keys
 #   read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
 # ---------------------------------------------------------------------------
 set -euo pipefail
