@@ -260,3 +260,13 @@ See [NOTICE.md](NOTICE.md) for the model and endpoint terms.
 | Python | 3.14.9 |
 | Model | MiniMax-M3.1-Flash · 1M ctx |
 | Endpoint | `integrate.api.nvidia.com/v1` |
+
+## JAHIDS.AI Agent Runtime v0.1
+
+This repository now includes an optional governed mission API for NVIDIA NIM, OpenClaw, and Hermes. It is a separate integration layer; the original setup and launch scripts remain unchanged.
+
+- Runtime source, API lifecycle, safety defaults, and run instructions: [runtime/README.md](runtime/README.md)
+- Local API defaults to loopback and observe-only autonomy.
+- Missions require an explicit approval step; high-impact categories are blocked.
+- Docker Compose keeps the service bound to localhost and persists SQLite state in a named volume.
+- This is an early integration runtime, not the full JAHIDS.AI Control Plane or production platform.
