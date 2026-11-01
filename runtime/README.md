@@ -95,6 +95,18 @@ Example request:
 
 The address above is an example only. Configure the real sender and recipient allowlist with your mail provider first.
 
+## Evidence and audit events
+
+The runtime writes mission lifecycle events to the same SQLite database in an
+append-only application table. Events record the mission ID, event type, actor,
+payload digest, timestamp, and bounded non-secret details. Mission prompts,
+provider credentials, owner tokens, and SMTP passwords are not copied into the
+audit event payload. Application-level UPDATE and DELETE operations are blocked
+by SQLite triggers. This is not a cryptographically tamper-proof or remote audit
+service; an administrator with direct database-file access can still replace the
+database. Back up and protect the data volume, and use a separately controlled
+audit sink before production deployment.
+
 ## Mission lifecycle
 
 1. POST /v1/missions with provider, prompt, and category.
