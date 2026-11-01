@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .auth import OwnerAuthenticator
+from .email import EmailConfigurationError, EmailDeliveryError, SmtpMailer
 from .service import MissionService
 
 
@@ -95,6 +96,16 @@ class Handler(BaseHTTPRequestHandler):
                     "autonomy_level": self.service.governor.autonomy_level,
                     "allowed_categories": ["model", "read", "analysis"],
                     "blocked_categories": sorted(self.service.governor.BLOCKED_CATEGORIES),
+                    "smtp_configured": all(
+                        os.getenv(name, "").strip()
+                        for name in (
+                            "JAHIDS_SMTP_HOST",
+                            "JAHIDS_SMTP_USERNAME",
+                            "JAHIDS_SMTP_PASSWORD",
+                            "JAHIDS_EMAIL_FROM",
+                            "JAHIDS_EMAIL_ALLOWED_RECIPIENTS",
+                        )
+                    ),
                 },
             )
         if path == "/v1/missions":
@@ -110,6 +121,20 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             body = self.body()
+            if path == "/v1/email/send":
+                try:
+                    result = SmtpMailer().send(
+                        body.get("to", ""),
+                        body.get("subject", ""),
+                        body.get("text", ""),
+                    )
+                    return self.send_json(200, result)
+                except PermissionError as exc:
+                    return self.send_json(403, {"error": str(exc)})
+                except EmailConfigurationError as exc:
+                    return self.send_json(503, {"error": str(exc)})
+                except (ValueError, EmailDeliveryError) as exc:
+                    return self.send_json(400 if isinstance(exc, ValueError) else 502, {"error": str(exc)})
             if path == "/v1/missions":
                 mission = self.service.create(
                     body.get("provider", "nvidia-nim"),
