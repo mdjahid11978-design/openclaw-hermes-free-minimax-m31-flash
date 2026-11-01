@@ -6,7 +6,7 @@ from .auth import OwnerAuthenticator
 from .service import MissionService
 
 class Handler(BaseHTTPRequestHandler):
-    service = MissionService()
+    service = None
     authenticator = None
     def send_json(self, status, payload):
         data=json.dumps(payload,default=str).encode()
@@ -64,6 +64,7 @@ def main():
     host=os.getenv("JAHIDS_HOST","127.0.0.1"); port=int(os.getenv("JAHIDS_PORT","8787"))
     if host not in {"127.0.0.1","localhost"} and os.getenv("JAHIDS_ALLOW_REMOTE_BIND")!="true":
         raise SystemExit("remote bind blocked; expose only behind a trusted TLS reverse proxy")
+    Handler.service = MissionService()
     server=ThreadingHTTPServer((host,port),Handler)
     print("JAHIDS.AI Agent Runtime listening on "+host+":"+str(port))
     try: server.serve_forever()
