@@ -103,7 +103,7 @@ append-only application table. Events record the mission ID, event type, actor,
 payload digest, timestamp, and bounded non-secret details. Mission prompts,
 provider credentials, owner tokens, and SMTP passwords are not copied into the
 audit event payload. Application-level UPDATE and DELETE operations are blocked
-by SQLite triggers. This is not a cryptographically tamper-proof or remote audit
+by SQLite triggers. Approval consumption and the `execution_started` event are committed in one database transaction; if the event insert fails, the approval remains available for retry. Mission-scoped history uses a composite index and the API supports bounded offset pagination. This is not a cryptographically tamper-proof or remote audit
 service; an administrator with direct database-file access can still replace the
 database. Back up and protect the data volume, and use a separately controlled
 audit sink before production deployment.
