@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# setup.sh — install OpenClaw + Hermes Agent, both on FREE MiniMax M3.1 Flash.
+# setup.sh — install OpenClaw + Hermes Agent with MiniMax M3.1 Flash via NVIDIA NIM.
 #
 # Built by Jahid — AI Agent Developer & Full Stack Engineer
 #   github.com/mdjahid11978-design
 #
 # What it does
-#   1. Installs Node 24 (required by OpenClaw >= 2026.10) under ~/.home/tools
+#   1. Installs Node 24 (required by OpenClaw >= 2026.10) under $HOME/tools
 #   2. Installs OpenClaw (npm, latest stable)
 #   3. Installs Hermes Agent (official installer, stable channel)
-#   4. Points both at minimaxai/minimax-m3.1-flash on NVIDIA NIM's free tier
+#   4. Configures both for minimaxai/minimax-m3.1-flash on NVIDIA NIM
 #   5. Verifies both resolve to the model
 #
 # Usage
 #   ./setup.sh              # full install
 #   ./setup.sh --verify     # just verify an existing install
 #
-# You still need ONE free key for the model itself:
-#   https://build.nvidia.com/settings/api-keys   (no credit card required)
-#   export NVIDIA_API_KEY=nvapi-...
+# You need an NVIDIA API key for model access:
+#   https://build.nvidia.com/settings/api-keys
+#   read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -47,7 +47,11 @@ rm_rf() {
 }
 
 VERIFY_ONLY=0
-[[ "${1:-}" == "--verify" ]] && VERIFY_ONLY=1
+if [[ "${1:-}" == "--verify" ]]; then
+  VERIFY_ONLY=1
+elif [[ $# -gt 0 ]]; then
+  die "usage: $0 [--verify]"
+fi
 
 # ---------------------------------------------------------------------------
 say "Preflight"
@@ -56,6 +60,25 @@ command -v curl  >/dev/null || die "curl is required"
 command -v git   >/dev/null || die "git is required"
 command -v tar   >/dev/null || die "tar is required"
 info "curl, git, tar present"
+
+# --verify is read-only: it never downloads, installs, patches, or writes config.
+if [[ "$VERIFY_ONLY" -eq 1 ]]; then
+  [[ -x "$NODE_DIR/bin/node" ]] || die "Node.js is not installed at $NODE_DIR"
+  [[ -x "$NODE_DIR/bin/openclaw" ]] || die "OpenClaw is not installed"
+  [[ -x "$HERMES_HOME_DIR/hermes-agent/.hermes/bin/hermes" ]] || die "Hermes Agent is not installed"
+  [[ -f "$STATE_DIR/openclaw.json" ]] || die "OpenClaw state is missing"
+  [[ -f "$HERMES_HOME_DIR/config.yaml" ]] || die "Hermes config is missing"
+  export PATH="$NODE_DIR/bin:$HERMES_HOME_DIR/hermes-agent/.hermes/bin:$PATH"
+  export OPENCLAW_STATE_DIR="$STATE_DIR"
+  oc_model="$("$NODE_DIR/bin/openclaw" models status --plain 2>/dev/null | head -1)"
+  h_model="$(hermes config get model.default 2>/dev/null | tail -1)"
+  [[ "$oc_model" == *"$MODEL"* ]] || die "OpenClaw model mismatch: ${oc_model:-unresolved}"
+  [[ "$h_model" == *"$MODEL"* ]] || die "Hermes model mismatch: ${h_model:-unresolved}"
+  info "OpenClaw -> $oc_model"
+  info "Hermes   -> $h_model"
+  say "Verification passed; no files were changed"
+  exit 0
+fi
 
 # The default Aliyun PyPI mirror in some images is unreachable — force pypi.org.
 export UV_INDEX_URL="${UV_INDEX_URL:-https://pypi.org/simple}"
@@ -168,11 +191,11 @@ fi
 
 cat <<'DONE'
 
-Done. One key is still needed for the model itself:
+Done. Supply your provider key securely when you start an agent:
 
-  1. Get a free key (no credit card):
+  1. Get an NVIDIA API key in your NVIDIA account:
        https://build.nvidia.com/settings/api-keys
-  2. export NVIDIA_API_KEY=nvapi-...
+  2. read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
   3. ./scripts/run-openclaw.sh     # OpenClaw
      ./scripts/run-hermes.sh        # Hermes Agent
 
