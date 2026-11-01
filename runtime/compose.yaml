@@ -7,6 +7,8 @@ services:
       - "127.0.0.1:8787:8787"
     env_file:
       - .env
+    environment:
+      JAHIDS_DB_PATH: /app/data/jahids-runtime.sqlite3
     volumes:
       - jahids-data:/app/data
     read_only: true
