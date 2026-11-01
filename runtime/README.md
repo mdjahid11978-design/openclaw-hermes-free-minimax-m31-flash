@@ -75,6 +75,7 @@ Every route under /v1 requires:
 - GET /v1/status — runtime version and Governor policy summary.
 - GET /v1/missions — mission list.
 - GET /v1/missions/{id} — mission details.
+- GET /v1/missions/{id}/events — authenticated mission lifecycle evidence (non-secret event metadata).
 - POST /v1/missions — create a mission.
 - POST /v1/missions/{id}/approve — request Governor approval.
 - POST /v1/missions/{id}/execute — execute with the returned approval ID.
@@ -94,6 +95,18 @@ Example request:
       -d '{"to":"owner@example.com","subject":"Test","text":"JAHIDS.AI email test"}'
 
 The address above is an example only. Configure the real sender and recipient allowlist with your mail provider first.
+
+## Evidence and audit events
+
+The runtime writes mission lifecycle events to the same SQLite database in an
+append-only application table. Events record the mission ID, event type, actor,
+payload digest, timestamp, and bounded non-secret details. Mission prompts,
+provider credentials, owner tokens, and SMTP passwords are not copied into the
+audit event payload. Application-level UPDATE and DELETE operations are blocked
+by SQLite triggers. This is not a cryptographically tamper-proof or remote audit
+service; an administrator with direct database-file access can still replace the
+database. Back up and protect the data volume, and use a separately controlled
+audit sink before production deployment.
 
 ## Mission lifecycle
 

@@ -101,6 +101,14 @@ class Handler(BaseHTTPRequestHandler):
             )
         if path == "/v1/missions":
             return self.send_json(200, {"missions": self.service.store.list()})
+        if path.startswith("/v1/missions/") and path.endswith("/events"):
+            parts = path.strip("/").split("/")
+            if len(parts) != 4 or parts[:2] != ["v1", "missions"]:
+                return self.send_json(404, {"error": "not_found"})
+            mission = self.service.store.get(parts[2])
+            if not mission:
+                return self.send_json(404, {"error": "not_found"})
+            return self.send_json(200, {"events": self.service.store.list_audit_events(parts[2])})
         if path.startswith("/v1/missions/"):
             mission = self.service.store.get(path.rsplit("/", 1)[-1])
             return self.send_json(200 if mission else 404, mission or {"error": "not_found"})
@@ -147,10 +155,11 @@ class Handler(BaseHTTPRequestHandler):
                     result = self.service.execute(parts[2], body.get("approval_id", ""))
                 else:
                     result = False
-                return self.send_json(
-                    404 if result is None or result is False else 200,
-                    result or {"error": "not_found"},
-                )
+                if result is None or result is False:
+                    return self.send_json(404, {"error": "not_found"})
+                decision = result.get("decision", {}) if isinstance(result, dict) else {}
+                status = 200 if decision.get("allowed", True) else 403
+                return self.send_json(status, result)
             return self.send_json(404, {"error": "not_found"})
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             return self.send_json(400, {"error": str(exc)})

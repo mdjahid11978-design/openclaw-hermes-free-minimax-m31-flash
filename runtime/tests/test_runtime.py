@@ -25,6 +25,8 @@ class RuntimeTests(unittest.TestCase):
         result=service.execute(mission["id"],approved["mission"]["approval_id"])
         self.assertEqual(result["mission"]["status"],"succeeded")
         self.assertEqual(result["mission"]["result"]["text"],"test response")
+        event_types = [event["event_type"] for event in self.store.list_audit_events(mission["id"])]
+        self.assertEqual(set(event_types), {"mission_created", "mission_approved", "execution_started", "execution_succeeded"})
     def test_wrong_approval_rejected(self):
         service=MissionService(self.store,Governor(1),FakeAdapters())
         mission=service.create("nvidia-nim","hello")
@@ -34,6 +36,8 @@ class RuntimeTests(unittest.TestCase):
         service=MissionService(self.store,Governor(5),FakeAdapters())
         mission=service.create("nvidia-nim","delete production","destructive")
         self.assertFalse(service.approve(mission["id"])["decision"]["allowed"])
+        events = self.store.list_audit_events(mission["id"])
+        self.assertEqual(events[0]["event_type"], "approval_denied")
     def test_approval_is_single_use(self):
         service=MissionService(self.store,Governor(1),FakeAdapters())
         mission=service.create("nvidia-nim","hello")
