@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Launch Hermes Agent on the FREE MiniMax M3.1 Flash endpoint (NVIDIA NIM).
+# Launch Hermes Agent with MiniMax M3.1 Flash via NVIDIA NIM.
 #
 # Built by Jahid — AI Agent Developer & Full Stack Engineer
 #   github.com/mdjahid11978-design
@@ -8,11 +8,11 @@
 # Why this file exists
 #   OpenRouter's free `minimax/minimax-m3.1-flash:free` slug was retired on
 #   2026-10-22. NVIDIA's build.nvidia.com catalog still serves
-#   `minimaxai/minimax-m3.1-flash` free of per-token billing (rate limited).
+#   `minimaxai/minimax-m3.1-flash` subject to NVIDIA account pricing, trial eligibility, and rate limits.
 #
 # Setup (once):
 #   1. Get a free key: https://build.nvidia.com/settings/api-keys   (no credit card)
-#   2. export NVIDIA_API_KEY=nvapi-...
+#   2. read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
 #   3. ./run-hermes.sh
 #
 # Hermes lives under ~/.hermes (persistent) and its model config is already
@@ -33,7 +33,7 @@ if [[ -z "${NVIDIA_API_KEY:-}" ]]; then
   cat >&2 <<'MSG'
 ERROR: NVIDIA_API_KEY is not set.
 
-Get a free key (no credit card required):
+Create an NVIDIA API key in your NVIDIA account:
   https://build.nvidia.com/settings/api-keys
 
 Then:
