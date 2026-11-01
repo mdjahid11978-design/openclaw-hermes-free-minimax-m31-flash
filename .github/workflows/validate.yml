@@ -97,6 +97,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Record runner context
+        run: |
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Runner: ${RUNNER_OS} / ${RUNNER_ARCH}"
       - name: Scan repository for committed credentials
         uses: gitleaks/gitleaks-action@v2
         env:
