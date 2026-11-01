@@ -32,7 +32,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def send_console(self):
-        console = Path(__file__).resolve().parents[2] / "web" / "index.html"
+        default_dir = Path(__file__).resolve().parents[2] / "web"
+        console_dir = Path(os.getenv("JAHIDS_WEB_DIR", str(default_dir))).resolve()
+        console = console_dir / "index.html"
         try:
             data = console.read_bytes()
         except OSError:
@@ -79,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             return self.send_json(
                 200,
-                {"status": "ok", "service": "jahids-agent-runtime", "version": "0.1.0"},
+                {"status": "ok", "service": "jahids-agent-runtime", "version": "0.2.0"},
             )
         if not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
@@ -89,7 +91,7 @@ class Handler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "jahids-agent-runtime",
-                    "version": "0.1.0",
+                    "version": "0.2.0",
                     "autonomy_level": self.service.governor.autonomy_level,
                     "allowed_categories": ["model", "read", "analysis"],
                     "blocked_categories": sorted(self.service.governor.BLOCKED_CATEGORIES),
