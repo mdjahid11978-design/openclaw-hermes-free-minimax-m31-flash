@@ -6,6 +6,35 @@ The GitHub repository is `mdjahid11978-design/openclaw-hermes-free-minimax-m31-f
 
 **Important:** repository visibility was reported as `public` during the 2026-11-01 inspection. Anyone can read public source. To restrict it, the account owner must open **Repository → Settings → General → Danger Zone → Change repository visibility → Make private**. Then review **Settings → Collaborators** and **Settings → Applications** to remove any access that should not remain. A private repository is still accessible to collaborators and installed apps that retain permission.
 
+## Authenticate to GitHub from your own workstation
+
+Use GitHub's official browser-based CLI login or SSH authentication. Do not put a personal access token in a repository file, script, Docker image, or shared environment file.
+
+GitHub CLI:
+
+```bash
+gh auth login --hostname github.com --git-protocol ssh --web
+gh auth status
+gh repo view mdjahid11978-design/openclaw-hermes-free-minimax-m31-flash
+```
+
+For Git over SSH, add your public SSH key to your GitHub account and verify with:
+
+```bash
+ssh -T git@github.com
+```
+
+The GitHub account that owns this repository is `mdjahid11978-design`. The connected identity inspected for this change has administrator permission. Do not share account passwords, SSH private keys, recovery codes, or personal access tokens.
+
+## Keep repository changes owner-controlled
+
+After changing the repository to private:
+- Review **Settings → Collaborators** and remove anyone who should not retain access.
+- Review **Settings → Applications → Installed GitHub Apps** and revoke installations that do not need repository access.
+- Protect `main`: require pull requests, require the validation workflow to pass, block force pushes and branch deletion, and restrict direct pushes where GitHub plan/settings allow.
+- Keep Actions permissions read-only by default. Grant a workflow extra permissions only when a specific job needs them.
+- Keep the owner as the required code owner. The added CODEOWNERS file requests review from `@mdjahid11978-design`; branch protection is still needed to enforce review.
+
 ## Runtime owner authentication
 
 The runtime uses a single owner-held bearer secret, not GitHub OAuth and not an application username/password database.
