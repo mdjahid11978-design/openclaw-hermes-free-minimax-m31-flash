@@ -75,7 +75,7 @@ Every route under /v1 requires:
 - GET /v1/status — runtime version and Governor policy summary.
 - GET /v1/missions — mission list.
 - GET /v1/missions/{id} — mission details.
-- GET /v1/missions/{id}/events — authenticated mission lifecycle evidence (non-secret event metadata).
+- GET /v1/missions/{id}/events — authenticated mission lifecycle evidence (non-secret event metadata); supports `?limit=100&offset=0` (limit is bounded to 1–500, offset to 0–10,000,000).
 - POST /v1/missions — create a mission.
 - POST /v1/missions/{id}/approve — request Governor approval.
 - POST /v1/missions/{id}/execute — execute with the returned approval ID.
