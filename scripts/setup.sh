@@ -6,7 +6,7 @@
 #   github.com/mdjahid11978-design
 #
 # What it does
-#   1. Installs Node 24 (required by OpenClaw >= 2026.10) under ~/.home/tools
+#   1. Installs Node 24 (required by OpenClaw >= 2026.10) under $HOME/tools
 #   2. Installs OpenClaw (npm, latest stable)
 #   3. Installs Hermes Agent (official installer, stable channel)
 #   4. Points both at minimaxai/minimax-m3.1-flash on NVIDIA NIM's free tier
@@ -18,7 +18,7 @@
 #
 # You still need ONE free key for the model itself:
 #   https://build.nvidia.com/settings/api-keys   (no credit card required)
-#   export NVIDIA_API_KEY=nvapi-...
+#   read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -191,11 +191,11 @@ fi
 
 cat <<'DONE'
 
-Done. One key is still needed for the model itself:
+Done. Supply your provider key securely when you start an agent:
 
-  1. Get a free key (no credit card):
+  1. Get an NVIDIA API key in your NVIDIA account:
        https://build.nvidia.com/settings/api-keys
-  2. export NVIDIA_API_KEY=nvapi-...
+  2. read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
   3. ./scripts/run-openclaw.sh     # OpenClaw
      ./scripts/run-hermes.sh        # Hermes Agent
 
