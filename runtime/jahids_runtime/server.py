@@ -21,8 +21,11 @@ class Handler(BaseHTTPRequestHandler):
         return bool(token) and hmac.compare_digest(self.headers.get("Authorization",""),"Bearer "+token)
     def body(self):
         length=int(self.headers.get("Content-Length","0"))
-        if length<1 or length>16000: raise ValueError("body must be 1-16000 bytes")
-        return json.loads(self.rfile.read(length))
+        if length<0 or length>16000: raise ValueError("body must be at most 16000 bytes")
+        if length == 0: return {}
+        payload=json.loads(self.rfile.read(length))
+        if not isinstance(payload,dict): raise ValueError("JSON body must be an object")
+        return payload
     def do_GET(self):
         path=urlparse(self.path).path
         if path=="/healthz": return self.send_json(200,{"status":"ok","service":"jahids-agent-runtime","version":"0.1.0"})
