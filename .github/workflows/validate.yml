@@ -11,42 +11,93 @@ on:
 permissions:
   contents: read
 
+# Keep validation attempts independent. Do not cancel an active run merely because
+# another commit was pushed; every commit should retain its own audit result.
 concurrency:
-  group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  group: validate-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
-  validate:
-    name: Validate setup and runtime
+  python-runtime:
+    name: Python runtime (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Record runner context
+        run: |
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Runner: ${RUNNER_OS} / ${RUNNER_ARCH}"
+          python --version || true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Validate Python runtime
+          python-version: ${{ matrix.python-version }}
+      - name: Compile runtime and run tests
         working-directory: runtime
         run: |
           python -m compileall -q jahids_runtime tests
           PYTHONPATH=. python -m unittest discover -s tests -v
-      - name: Build runtime container
-        run: docker build --file runtime/Dockerfile --tag jahids-agent-runtime:ci .
+
+  shell-and-config:
+    name: Shell and configuration checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Record runner context
+        run: |
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Runner: ${RUNNER_OS} / ${RUNNER_ARCH}"
       - name: Validate Bash syntax
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r -d '' file; do
+          mapfile -d '' files < <(find scripts -type f -name '*.sh' -print0)
+          if (("${#files[@]}" == 0)); then
+            echo "No shell scripts found"
+            exit 1
+          fi
+          for file in "${files[@]}"; do
             bash -n "$file"
             echo "PASS: $file"
-          done < <(find scripts -type f -name '*.sh' -print0)
+          done
       - name: Validate JSON5 configuration
         run: |
           npx --yes json5 config/openclaw-m31-flash.patch.json5 >/dev/null
           echo "PASS: JSON5 syntax"
-      - name: Check for accidentally committed credentials
+
+  container:
+    name: Runtime container build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Record runner context
+        run: |
+          echo "Commit: ${GITHUB_SHA}"
+          docker version
+      - name: Build runtime container
+        run: docker build --file runtime/Dockerfile --tag jahids-agent-runtime:ci .
+
+  secret-scan:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Scan repository for committed credentials
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
