@@ -37,6 +37,7 @@ class MissionStore:
             db.execute("""CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
                 BEFORE DELETE ON audit_events
                 BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END""")
+            db.execute("CREATE INDEX IF NOT EXISTS idx_audit_events_mission_created_id ON audit_events(mission_id, created_at DESC, id DESC)")
         # Mission prompts/results can contain private data; restrict the database file.
         os.chmod(self.path, 0o600)
     def connect(self):
@@ -81,15 +82,20 @@ class MissionStore:
             if cursor.rowcount != 1: return None
         return self.get(mission_id)
 
-    def record_audit_event(self, event_type, mission_id=None, actor="system", payload_hash=None, details=None):
-        """Append a bounded, non-secret audit event. The application cannot update or delete events."""
+    @staticmethod
+    def _insert_audit_event(db, event_type, mission_id=None, actor="system", payload_hash=None, details=None):
+        """Validate and insert one bounded audit event using the caller's transaction."""
         if not isinstance(event_type, str) or not event_type or len(event_type) > 80:
             raise ValueError("event_type must contain 1-80 characters")
         if not isinstance(actor, str) or not actor or len(actor) > 120:
             raise ValueError("actor must contain 1-120 characters")
         if mission_id is not None and (not isinstance(mission_id, str) or len(mission_id) > 80):
             raise ValueError("mission_id must be a string of at most 80 characters")
-        if payload_hash is not None and (not isinstance(payload_hash, str) or len(payload_hash) != 64):
+        if payload_hash is not None and (
+            not isinstance(payload_hash, str)
+            or len(payload_hash) != 64
+            or any(char not in "0123456789abcdef" for char in payload_hash.lower())
+        ):
             raise ValueError("payload_hash must be a SHA-256 hex digest")
         if details is None:
             details = {}
@@ -107,26 +113,58 @@ class MissionStore:
             "details": details,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        with self.lock, self.connect() as db:
-            db.execute(
-                "INSERT INTO audit_events (id,mission_id,event_type,actor,payload_hash,details,created_at) VALUES (?,?,?,?,?,?,?)",
-                (event["id"], mission_id, event_type, actor, payload_hash, encoded, event["created_at"]),
-            )
+        db.execute(
+            "INSERT INTO audit_events (id,mission_id,event_type,actor,payload_hash,details,created_at) VALUES (?,?,?,?,?,?,?)",
+            (event["id"], mission_id, event_type, actor, payload_hash, encoded, event["created_at"]),
+        )
         return event
 
-    def list_audit_events(self, mission_id=None, limit=100):
-        """Return newest audit events, optionally scoped to one mission."""
-        bounded_limit = min(max(int(limit), 1), 500)
+    def record_audit_event(self, event_type, mission_id=None, actor="system", payload_hash=None, details=None):
+        """Append a bounded, non-secret audit event."""
+        with self.lock, self.connect() as db:
+            return self._insert_audit_event(
+                db, event_type, mission_id=mission_id, actor=actor,
+                payload_hash=payload_hash, details=details,
+            )
+
+    def claim_approved_with_audit(self, mission_id, approval_id):
+        """Atomically consume an approval and append execution_started evidence."""
+        now = datetime.now(timezone.utc).isoformat()
+        with self.lock, self.connect() as db:
+            cursor = db.execute(
+                "UPDATE missions SET status='running',updated_at=? "
+                "WHERE id=? AND status='approved' AND approval_id=? AND approval_expires_at>?",
+                (now, mission_id, approval_id, now),
+            )
+            if cursor.rowcount != 1:
+                return None
+            row = db.execute("SELECT * FROM missions WHERE id=?", (mission_id,)).fetchone()
+            mission = self.decode(row)
+            self._insert_audit_event(
+                db, "execution_started", mission_id=mission_id,
+                payload_hash=mission["payload_hash"],
+            )
+        return mission
+
+    def list_audit_events(self, mission_id=None, limit=100, offset=0):
+        """Return a bounded page of newest audit events, optionally scoped to one mission."""
+        try:
+            bounded_limit = min(max(int(limit), 1), 500)
+            bounded_offset = int(offset)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("limit and offset must be integers") from exc
+        if bounded_offset < 0 or bounded_offset > 10000000:
+            raise ValueError("offset must be between 0 and 10000000")
         with self.lock, self.connect() as db:
             if mission_id is None:
                 rows = db.execute(
-                    "SELECT * FROM audit_events ORDER BY created_at DESC, id DESC LIMIT ?",
-                    (bounded_limit,),
+                    "SELECT * FROM audit_events ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+                    (bounded_limit, bounded_offset),
                 ).fetchall()
             else:
                 rows = db.execute(
-                    "SELECT * FROM audit_events WHERE mission_id=? ORDER BY created_at DESC, id DESC LIMIT ?",
-                    (mission_id, bounded_limit),
+                    "SELECT * FROM audit_events WHERE mission_id=? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+                    (mission_id, bounded_limit, bounded_offset),
                 ).fetchall()
         events = []
         for row in rows:
