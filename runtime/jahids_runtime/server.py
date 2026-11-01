@@ -109,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
             if not mission:
                 return self.send_json(404, {"error": "not_found"})
             try:
-                query = parse_qs(urlparse(self.path).query, strict_parsing=True)
+                query = parse_qs(urlparse(self.path).query, strict_parsing=True, max_num_fields=2)
                 if set(query) - {"limit", "offset"} or any(len(values) != 1 for values in query.values()):
                     return self.send_json(400, {"error": "invalid_pagination"})
                 limit = int(query.get("limit", ["100"])[0])
