@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "jahids-agent-runtime"
+version = "0.1.0"
+description = "Governed mission runtime for JAHIDS.AI"
+requires-python = ">=3.11"
+dependencies = []
+[project.scripts]
+jahids-runtime = "jahids_runtime.server:main"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jahids_runtime*"]
