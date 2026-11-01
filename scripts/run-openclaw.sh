@@ -7,10 +7,10 @@
 #
 # Why this file exists
 #   The obvious free route — OpenRouter's `minimax/minimax-m3.1-flash:free` —
-#   was retired on 2026-10-22. Live check of /api/v1/models confirms the only
-#   remaining slug is the paid `minimax/minimax-m3.1-flash`.
+#   was reported as retired in the project notes on 2026-10-22. Check the current catalog; the
+#   available model identifiers and pricing may change.
 #   NVIDIA's build.nvidia.com catalog still serves `minimaxai/minimax-m3.1-flash`
-#   at no per-token cost (rate limited, ~40 RPM shared across the catalog).
+#   subject to NVIDIA account pricing, trial eligibility, and rate limits.
 #
 # Setup (once):
 #   1. Get a free key: https://build.nvidia.com/settings/api-keys   (no credit card)
@@ -34,11 +34,11 @@ if [[ -z "${NVIDIA_API_KEY:-}" ]]; then
   cat >&2 <<'MSG'
 ERROR: NVIDIA_API_KEY is not set.
 
-Get a free key (no credit card required):
+Create an NVIDIA API key in your NVIDIA account:
   https://build.nvidia.com/settings/api-keys
 
 Then:
-  export NVIDIA_API_KEY=nvapi-...
+  read -rsp "NVIDIA API key: " NVIDIA_API_KEY; echo; export NVIDIA_API_KEY
 MSG
   exit 1
 fi
