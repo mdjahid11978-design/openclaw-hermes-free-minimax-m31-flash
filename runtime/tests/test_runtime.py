@@ -26,7 +26,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result["mission"]["status"],"succeeded")
         self.assertEqual(result["mission"]["result"]["text"],"test response")
         event_types = [event["event_type"] for event in self.store.list_audit_events(mission["id"])]
-        self.assertEqual(set(event_types), {"mission_created", "mission_approved", "execution_started", "execution_succeeded"})
+        self.assertEqual(sorted(event_types), sorted(["mission_created", "mission_approved", "execution_started", "execution_succeeded"]))
     def test_wrong_approval_rejected(self):
         service=MissionService(self.store,Governor(1),FakeAdapters())
         mission=service.create("nvidia-nim","hello")

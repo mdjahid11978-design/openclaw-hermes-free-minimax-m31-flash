@@ -3,7 +3,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .auth import OwnerAuthenticator
 from .email import EmailConfigurationError, EmailDeliveryError, SmtpMailer
@@ -108,7 +108,19 @@ class Handler(BaseHTTPRequestHandler):
             mission = self.service.store.get(parts[2])
             if not mission:
                 return self.send_json(404, {"error": "not_found"})
-            return self.send_json(200, {"events": self.service.store.list_audit_events(parts[2])})
+            try:
+                query = parse_qs(urlparse(self.path).query, strict_parsing=True, max_num_fields=2)
+                if set(query) - {"limit", "offset"} or any(len(values) != 1 for values in query.values()):
+                    return self.send_json(400, {"error": "invalid_pagination"})
+                limit = int(query.get("limit", ["100"])[0])
+                offset = int(query.get("offset", ["0"])[0])
+                events = self.service.store.list_audit_events(parts[2], limit=limit, offset=offset)
+            except (ValueError, TypeError):
+                return self.send_json(400, {"error": "invalid_pagination"})
+            return self.send_json(
+                200,
+                {"events": events, "page": {"limit": min(max(limit, 1), 500), "offset": offset}},
+            )
         if path.startswith("/v1/missions/"):
             mission = self.service.store.get(path.rsplit("/", 1)[-1])
             return self.send_json(200 if mission else 404, mission or {"error": "not_found"})
