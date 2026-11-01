@@ -17,7 +17,8 @@ A dependency-free mission API providing a governed execution boundary around NVI
     . .venv/bin/activate
     pip install -e .
     cp .env.example .env
-    export JAHIDS_API_TOKEN='replace-this-before-running'
+    # Set a long random JAHIDS_API_TOKEN in .env, then load it:
+    set -a && . ./.env && set +a
     python -m jahids_runtime.server
 
 The API binds to 127.0.0.1:8787. Check GET /healthz.
