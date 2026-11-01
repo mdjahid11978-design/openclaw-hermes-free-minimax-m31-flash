@@ -18,6 +18,8 @@ class SmtpMailer:
         self.env = environ if environ is not None else os.environ
 
     def send(self, recipient, subject, text_body):
+        if not all(isinstance(value, str) for value in (recipient, subject, text_body)):
+            raise ValueError("to, subject, and text must be strings")
         host = self.env.get("JAHIDS_SMTP_HOST", "").strip()
         sender = self.env.get("JAHIDS_EMAIL_FROM", "").strip()
         username = self.env.get("JAHIDS_SMTP_USERNAME", "")
