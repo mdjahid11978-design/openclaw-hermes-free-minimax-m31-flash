@@ -1,7 +1,9 @@
 services:
   jahids-runtime:
-    build: .
-    image: jahids-agent-runtime:0.1.0
+    build:
+      context: ..
+      dockerfile: runtime/Dockerfile
+    image: jahids-agent-runtime:0.2.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:8787:8787"
@@ -9,6 +11,7 @@ services:
       - .env
     environment:
       JAHIDS_HOST: 0.0.0.0
+      JAHIDS_WEB_DIR: /app/web
       JAHIDS_DB_PATH: /app/data/jahids-runtime.sqlite3
       JAHIDS_ALLOW_REMOTE_BIND: "true"
     volumes:
