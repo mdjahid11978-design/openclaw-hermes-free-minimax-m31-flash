@@ -3,6 +3,7 @@ import json
 import os
 import sqlite3
 import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,6 +22,21 @@ class MissionStore:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(missions)")}
             if "approval_expires_at" not in columns:
                 db.execute("ALTER TABLE missions ADD COLUMN approval_expires_at TEXT")
+            db.execute("""CREATE TABLE IF NOT EXISTS audit_events (
+                id TEXT PRIMARY KEY,
+                mission_id TEXT,
+                event_type TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                payload_hash TEXT,
+                details TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )""")
+            db.execute("""CREATE TRIGGER IF NOT EXISTS audit_events_no_update
+                BEFORE UPDATE ON audit_events
+                BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END""")
+            db.execute("""CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
+                BEFORE DELETE ON audit_events
+                BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END""")
         # Mission prompts/results can contain private data; restrict the database file.
         os.chmod(self.path, 0o600)
     def connect(self):
@@ -64,3 +80,57 @@ class MissionStore:
                 (now,mission_id,approval_id,now))
             if cursor.rowcount != 1: return None
         return self.get(mission_id)
+
+    def record_audit_event(self, event_type, mission_id=None, actor="system", payload_hash=None, details=None):
+        """Append a bounded, non-secret audit event. The application cannot update or delete events."""
+        if not isinstance(event_type, str) or not event_type or len(event_type) > 80:
+            raise ValueError("event_type must contain 1-80 characters")
+        if not isinstance(actor, str) or not actor or len(actor) > 120:
+            raise ValueError("actor must contain 1-120 characters")
+        if mission_id is not None and (not isinstance(mission_id, str) or len(mission_id) > 80):
+            raise ValueError("mission_id must be a string of at most 80 characters")
+        if payload_hash is not None and (not isinstance(payload_hash, str) or len(payload_hash) != 64):
+            raise ValueError("payload_hash must be a SHA-256 hex digest")
+        if details is None:
+            details = {}
+        if not isinstance(details, dict):
+            raise ValueError("details must be an object")
+        encoded = json.dumps(details, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        if len(encoded.encode("utf-8")) > 8192:
+            raise ValueError("audit details exceed 8192 bytes")
+        event = {
+            "id": str(uuid.uuid4()),
+            "mission_id": mission_id,
+            "event_type": event_type,
+            "actor": actor,
+            "payload_hash": payload_hash,
+            "details": details,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with self.lock, self.connect() as db:
+            db.execute(
+                "INSERT INTO audit_events (id,mission_id,event_type,actor,payload_hash,details,created_at) VALUES (?,?,?,?,?,?,?)",
+                (event["id"], mission_id, event_type, actor, payload_hash, encoded, event["created_at"]),
+            )
+        return event
+
+    def list_audit_events(self, mission_id=None, limit=100):
+        """Return newest audit events, optionally scoped to one mission."""
+        bounded_limit = min(max(int(limit), 1), 500)
+        with self.lock, self.connect() as db:
+            if mission_id is None:
+                rows = db.execute(
+                    "SELECT * FROM audit_events ORDER BY created_at DESC, id DESC LIMIT ?",
+                    (bounded_limit,),
+                ).fetchall()
+            else:
+                rows = db.execute(
+                    "SELECT * FROM audit_events WHERE mission_id=? ORDER BY created_at DESC, id DESC LIMIT ?",
+                    (mission_id, bounded_limit),
+                ).fetchall()
+        events = []
+        for row in rows:
+            event = dict(row)
+            event["details"] = json.loads(event["details"])
+            events.append(event)
+        return events
