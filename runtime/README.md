@@ -1,15 +1,19 @@
 # JAHIDS.AI Agent Runtime v0.1
 
-A dependency-free mission API providing a governed execution boundary around NVIDIA NIM, OpenClaw, and Hermes. This is an integration runtime for this repository, not the complete JAHIDS.AI sovereign platform.
+A local-first mission API integrating NVIDIA NIM, OpenClaw, and Hermes. This is an early integration runtime, not the complete JAHIDS.AI Control Plane.
 
-## Safety defaults
-- Autonomy is 0 (observe-only) by default.
-- Every mission requires a separate approval call. Approval binds to the exact provider, prompt, and category hash.
-- Deploy, finance, credentials, destructive, legal, and ownership categories are blocked.
-- API writes and mission reads require JAHIDS_API_TOKEN.
-- Remote binding is blocked unless JAHIDS_ALLOW_REMOTE_BIND=true.
-- OpenClaw/Hermes execution is disabled unless JAHIDS_ENABLE_LOCAL_AGENTS=true. Commands use JSON argv arrays and never a shell.
-- Mission state is stored in SQLite; provider keys are not stored.
+## Security defaults
+- Single-owner bearer authentication; no public registration or shared default password.
+- Runtime refuses to start unless `JAHIDS_API_TOKEN` is a non-placeholder secret at least 32 characters long.
+- Every mission read and write requires the owner bearer token.
+- Only `GET /healthz` is unauthenticated and exposes liveness only.
+- Autonomy defaults to 0 (observe-only); high-impact categories are blocked.
+- Approvals bind to provider, prompt, and category; expire after 10 minutes and can be consumed once.
+- OpenClaw/Hermes process execution is disabled unless explicitly enabled.
+- Default listener is loopback. Docker publishes the service on host loopback.
+- Provider secrets are not stored in SQLite.
+
+Read [Authentication and Ownership](../docs/AUTHENTICATION-AND-OWNERSHIP.md) and [SECURITY.md](../SECURITY.md) before enabling execution.
 
 ## Run locally
     cd runtime
@@ -17,39 +21,47 @@ A dependency-free mission API providing a governed execution boundary around NVI
     . .venv/bin/activate
     pip install -e .
     cp .env.example .env
-    # Set a long random JAHIDS_API_TOKEN in .env, then load it:
-    set -a && . ./.env && set +a
+    chmod 600 .env
+
+Generate an owner token on your host:
+    python3 -c 'import secrets; print(secrets.token_urlsafe(48))'
+
+Put the generated value in `JAHIDS_API_TOKEN` in `.env`. Add your NVIDIA key to `NVIDIA_API_KEY` only if you intend to call NIM. Keep the file private.
+
+Load the environment and start:
+    set -a
+    . ./.env
+    set +a
     python -m jahids_runtime.server
 
-The API binds to 127.0.0.1:8787. Check GET /healthz.
+The API binds to `127.0.0.1:8787`.
 
 ## Docker Compose
-
-From the runtime directory, copy the example environment file, set a long random API token and your NVIDIA key if you intend to use NIM, then start the service:
-
+    cd runtime
     cp .env.example .env
-    # Edit .env and replace JAHIDS_API_TOKEN; add NVIDIA_API_KEY when needed.
+    chmod 600 .env
+    # Set JAHIDS_API_TOKEN and any required provider key in .env.
     docker compose -f compose.yaml up --build -d
     docker compose -f compose.yaml logs -f
 
-The container listens on its internal interface, but Compose publishes port 8787 only on host loopback (127.0.0.1). The named volume persists SQLite state. Keep the .env file private. Leave JAHIDS_AUTONOMY_LEVEL at 0 until you have reviewed the policy and intend to allow approved model/read/analysis missions.
+Compose publishes port 8787 only on host loopback and persists SQLite in a named volume. Do not change the port mapping to a public interface.
+
+## API authentication
+Every route under `/v1` requires:
+    Authorization: Bearer <JAHIDS_API_TOKEN>
+
+The owner token is separate from `NVIDIA_API_KEY`. Never reuse one for the other. Rotate the owner token by stopping the service, replacing the secret, and restarting.
 
 ## Mission lifecycle
-All mission endpoints except healthz require Authorization: Bearer $JAHIDS_API_TOKEN.
-1. POST /v1/missions with provider, prompt, and category.
-2. POST /v1/missions/{id}/approve.
-3. POST /v1/missions/{id}/execute with the returned approval_id.
-At autonomy level 0, execution remains blocked. At level 1, approved model/read/analysis missions can run.
+1. `POST /v1/missions` with provider, prompt, and category.
+2. `POST /v1/missions/{id}/approve`.
+3. `POST /v1/missions/{id}/execute` with the returned approval_id.
 
-## NVIDIA NIM
-Set NVIDIA_API_KEY in the runtime environment. The model identifier is configurable with JAHIDS_NIM_MODEL; verify the identifier enabled for your NVIDIA account. NVIDIA usage and rate limits are controlled by NVIDIA.
-
-## OpenClaw and Hermes
-Adapters require local binaries and explicit opt-in. Configure JAHIDS_OPENCLAW_ARGV and JAHIDS_HERMES_ARGV as JSON arrays containing the approved executable and fixed arguments. The runtime appends the prompt as the final argument. Test commands manually before enabling local execution.
+At autonomy 0, execution remains blocked. At autonomy 1, approved model/read/analysis missions can run.
 
 ## Tests
     cd runtime
     PYTHONPATH=. python -m unittest discover -s tests -v
 
 ## Production gaps
-Before internet exposure, add OIDC/RBAC, tenant isolation, TLS/reverse proxy, rate limiting, durable workers, signed audit events, encrypted secret management, backup/restore tests, adapter integration tests, and independent security review. Do not expose this service directly to the public internet.
+Before remote or multi-user use, add a supported OIDC provider, RBAC, tenant isolation, TLS, rate limiting, durable workers, signed audit events, managed secrets, backup/restore tests, adapter integration tests, and independent security review. Do not expose this development service directly to the public internet.
