@@ -36,6 +36,11 @@ This repository contains setup scripts for OpenClaw and Hermes Agent, plus an op
 - Keep credentials in a local secret manager or protected environment file. Never commit them.
 - See [Security Policy](SECURITY.md) and [Authentication & Ownership](docs/AUTHENTICATION-AND-OWNERSHIP.md).
 
+## Platform architecture and delivery
+- Architecture and security boundaries: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- Phased engineering plan and release gates: [docs/DELIVERY-PLAN.md](docs/DELIVERY-PLAN.md).
+- Current implementation status is documented separately from target capabilities. Do not treat planned modules as implemented.
+
 ## Repository contents
 - `scripts/setup.sh` — installs OpenClaw and Hermes.
 - `scripts/run-openclaw.sh` — launches OpenClaw and reapplies the model configuration.
