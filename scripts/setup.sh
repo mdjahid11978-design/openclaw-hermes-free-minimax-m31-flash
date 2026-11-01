@@ -47,7 +47,11 @@ rm_rf() {
 }
 
 VERIFY_ONLY=0
-[[ "${1:-}" == "--verify" ]] && VERIFY_ONLY=1
+if [[ "${1:-}" == "--verify" ]]; then
+  VERIFY_ONLY=1
+elif [[ $# -gt 0 ]]; then
+  die "usage: $0 [--verify]"
+fi
 
 # ---------------------------------------------------------------------------
 say "Preflight"
@@ -56,6 +60,25 @@ command -v curl  >/dev/null || die "curl is required"
 command -v git   >/dev/null || die "git is required"
 command -v tar   >/dev/null || die "tar is required"
 info "curl, git, tar present"
+
+# --verify is read-only: it never downloads, installs, patches, or writes config.
+if [[ "$VERIFY_ONLY" -eq 1 ]]; then
+  [[ -x "$NODE_DIR/bin/node" ]] || die "Node.js is not installed at $NODE_DIR"
+  [[ -x "$NODE_DIR/bin/openclaw" ]] || die "OpenClaw is not installed"
+  [[ -x "$HERMES_HOME_DIR/hermes-agent/.hermes/bin/hermes" ]] || die "Hermes Agent is not installed"
+  [[ -f "$STATE_DIR/openclaw.json" ]] || die "OpenClaw state is missing"
+  [[ -f "$HERMES_HOME_DIR/config.yaml" ]] || die "Hermes config is missing"
+  export PATH="$NODE_DIR/bin:$HERMES_HOME_DIR/hermes-agent/.hermes/bin:$PATH"
+  export OPENCLAW_STATE_DIR="$STATE_DIR"
+  oc_model="$("$NODE_DIR/bin/openclaw" models status --plain 2>/dev/null | head -1)"
+  h_model="$(hermes config get model.default 2>/dev/null | tail -1)"
+  [[ "$oc_model" == *"$MODEL"* ]] || die "OpenClaw model mismatch: ${oc_model:-unresolved}"
+  [[ "$h_model" == *"$MODEL"* ]] || die "Hermes model mismatch: ${h_model:-unresolved}"
+  info "OpenClaw -> $oc_model"
+  info "Hermes   -> $h_model"
+  say "Verification passed; no files were changed"
+  exit 0
+fi
 
 # The default Aliyun PyPI mirror in some images is unreachable — force pypi.org.
 export UV_INDEX_URL="${UV_INDEX_URL:-https://pypi.org/simple}"
