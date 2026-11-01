@@ -108,10 +108,10 @@ class Handler(BaseHTTPRequestHandler):
             mission = self.service.store.get(parts[2])
             if not mission:
                 return self.send_json(404, {"error": "not_found"})
-            query = parse_qs(urlparse(self.path).query, strict_parsing=True)
-            if set(query) - {"limit", "offset"} or any(len(values) != 1 for values in query.values()):
-                return self.send_json(400, {"error": "invalid_pagination"})
             try:
+                query = parse_qs(urlparse(self.path).query, strict_parsing=True)
+                if set(query) - {"limit", "offset"} or any(len(values) != 1 for values in query.values()):
+                    return self.send_json(400, {"error": "invalid_pagination"})
                 limit = int(query.get("limit", ["100"])[0])
                 offset = int(query.get("offset", ["0"])[0])
                 events = self.service.store.list_audit_events(parts[2], limit=limit, offset=offset)
