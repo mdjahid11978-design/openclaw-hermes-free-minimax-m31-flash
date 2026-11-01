@@ -62,10 +62,10 @@ class MissionService:
         self._audit("execution_started", claimed)
         try:
             result=self.adapters.run(mission["provider"],mission["prompt"])
-            completed = self.store.update(mission_id,status="succeeded",result=result)
-            self._audit("execution_succeeded", completed)
-            return {"mission":completed,"decision":decision.__dict__}
         except Exception as exc:
             failed = self.store.update(mission_id,status="failed",error=type(exc).__name__)
             self._audit("execution_failed", failed, type(exc).__name__)
             return {"mission":failed,"decision":decision.__dict__}
+        completed = self.store.update(mission_id,status="succeeded",result=result)
+        self._audit("execution_succeeded", completed)
+        return {"mission":completed,"decision":decision.__dict__}
