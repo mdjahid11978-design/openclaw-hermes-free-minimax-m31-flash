@@ -1,5 +1,6 @@
 import sqlite3
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -38,6 +39,7 @@ class AuditEventTests(unittest.TestCase):
             "first", mission_id="mission-1", payload_hash="a" * 64
         )
         other = self.store.record_audit_event("other", mission_id="mission-2")
+        time.sleep(0.002)
         second = self.store.record_audit_event(
             "second", mission_id="mission-1", payload_hash="b" * 64
         )
