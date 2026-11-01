@@ -23,12 +23,14 @@ This repository contains setup scripts for OpenClaw and Hermes Agent, plus an op
 ## JAHIDS.AI Control Center
 - Start the optional runtime and open `http://127.0.0.1:8787/` for the responsive web dashboard.
 - Manage missions, request approvals, inspect Governor policy, and review configured agent adapters.
+- Owner admin & email page with an SMTP readiness indicator and allowlisted email sending through your own mail provider.
 - Setup and security guide: [docs/CONTROL-CENTER.md](docs/CONTROL-CENTER.md).
 - The UI uses the owner token for API calls; it does not store provider credentials or change Governor autonomy.
 
 ## Authentication and security
 - NVIDIA credentials use `NVIDIA_API_KEY`; they are not written into tracked model configuration.
 - The optional JAHIDS runtime has a separate single-owner `JAHIDS_API_TOKEN`.
+- Optional SMTP delivery uses server-only credentials and an explicit recipient allowlist; it does not create mailboxes or configure DNS.
 - Runtime mission endpoints require `Authorization: Bearer <owner-token>`; only liveness is unauthenticated.
 - Runtime autonomy defaults to 0 (observe-only), high-impact categories are blocked, and local agent execution is disabled by default.
 - Keep credentials in a local secret manager or protected environment file. Never commit them.
