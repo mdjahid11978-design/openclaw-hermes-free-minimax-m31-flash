@@ -24,10 +24,10 @@ set -euo pipefail
 
 TOOLS_DIR="${HOME:?HOME must be set}/tools"
 NODE_DIR="$TOOLS_DIR/node24"
-STATE_DIR="${HOME:?HOME must be set}/openclaw-state"
+STATE_DIR="${OPENCLAW_STATE_DIR:-${HOME:?HOME must be set}/openclaw-state}"
 
 export PATH="$NODE_DIR/bin:${PATH}"
-export OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$STATE_DIR}"
+export OPENCLAW_STATE_DIR="$STATE_DIR"
 
 # --- The free key -----------------------------------------------------------
 if [[ -z "${NVIDIA_API_KEY:-}" ]]; then
