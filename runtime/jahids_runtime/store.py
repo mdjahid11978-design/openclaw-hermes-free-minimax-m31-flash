@@ -9,7 +9,7 @@ from pathlib import Path
 class MissionStore:
     def __init__(self, path=None):
         self.path = path or os.getenv("JAHIDS_DB_PATH", "./data/jahids-runtime.sqlite3")
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.lock = threading.RLock()
         with self.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS missions (
@@ -21,6 +21,8 @@ class MissionStore:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(missions)")}
             if "approval_expires_at" not in columns:
                 db.execute("ALTER TABLE missions ADD COLUMN approval_expires_at TEXT")
+        # Mission prompts/results can contain private data; restrict the database file.
+        os.chmod(self.path, 0o600)
     def connect(self):
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
