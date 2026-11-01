@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       JAHIDS_DB_PATH: /app/data/jahids-runtime.sqlite3
+      JAHIDS_ALLOW_REMOTE_BIND: "true"
     volumes:
       - jahids-data:/app/data
     read_only: true
