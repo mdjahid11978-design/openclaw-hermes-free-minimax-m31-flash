@@ -33,13 +33,10 @@ jobs:
             echo "PASS: $file"
           done < <(find scripts -type f -name '*.sh' -print0)
 
-      - name: Validate JSON configuration
-        shell: bash
+      - name: Validate JSON5 configuration
         run: |
-          set -euo pipefail
-          python3 -m json.tool config/openclaw-m31-flash.patch.json5 >/dev/null
-          echo "PASS: JSON syntax"
-        continue-on-error: true
+          npx --yes json5 config/openclaw-m31-flash.patch.json5 >/dev/null
+          echo "PASS: JSON5 syntax"
 
       - name: Check for accidentally committed credentials
         uses: gitleaks/gitleaks-action@v2
