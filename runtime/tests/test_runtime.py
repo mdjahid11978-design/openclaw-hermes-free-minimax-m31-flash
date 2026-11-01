@@ -34,6 +34,13 @@ class RuntimeTests(unittest.TestCase):
         service=MissionService(self.store,Governor(5),FakeAdapters())
         mission=service.create("nvidia-nim","delete production","destructive")
         self.assertFalse(service.approve(mission["id"])["decision"]["allowed"])
+    def test_approval_is_single_use(self):
+        service=MissionService(self.store,Governor(1),FakeAdapters())
+        mission=service.create("nvidia-nim","hello")
+        approval=service.approve(mission["id"])["mission"]["approval_id"]
+        self.assertEqual(service.execute(mission["id"],approval)["mission"]["status"],"succeeded")
+        second=service.execute(mission["id"],approval)
+        self.assertFalse(second["decision"]["allowed"])
     def test_hash_binds_approval_to_payload(self):
         governor=Governor(1)
         approved_hash=governor.digest("nvidia-nim","hello","model")
