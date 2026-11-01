@@ -23,6 +23,17 @@ A dependency-free mission API providing a governed execution boundary around NVI
 
 The API binds to 127.0.0.1:8787. Check GET /healthz.
 
+## Docker Compose
+
+From the runtime directory, copy the example environment file, set a long random API token and your NVIDIA key if you intend to use NIM, then start the service:
+
+    cp .env.example .env
+    # Edit .env and replace JAHIDS_API_TOKEN; add NVIDIA_API_KEY when needed.
+    docker compose -f compose.yaml up --build -d
+    docker compose -f compose.yaml logs -f
+
+The container listens on its internal interface, but Compose publishes port 8787 only on host loopback (127.0.0.1). The named volume persists SQLite state. Keep the .env file private. Leave JAHIDS_AUTONOMY_LEVEL at 0 until you have reviewed the policy and intend to allow approved model/read/analysis missions.
+
 ## Mission lifecycle
 All mission endpoints except healthz require Authorization: Bearer $JAHIDS_API_TOKEN.
 1. POST /v1/missions with provider, prompt, and category.
