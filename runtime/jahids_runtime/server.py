@@ -1,34 +1,37 @@
-"""Standard-library HTTP API; write and mission-read endpoints require bearer auth."""
-import hmac
-import json
-import os
+"""Local-first HTTP API; all mission data and mutations require the owner bearer key."""
+import json, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
+from .auth import OwnerAuthenticator
 from .service import MissionService
 
 class Handler(BaseHTTPRequestHandler):
     service = MissionService()
-    def send_json(self,status,payload):
+    authenticator = None
+    def send_json(self, status, payload):
         data=json.dumps(payload,default=str).encode()
         self.send_response(status)
-        self.send_header("Content-Type","application/json")
-        self.send_header("Content-Length",str(len(data)))
-        self.send_header("X-Content-Type-Options","nosniff")
-        self.end_headers()
-        self.wfile.write(data)
+        for key,value in {
+            "Content-Type":"application/json; charset=utf-8","Content-Length":str(len(data)),
+            "Cache-Control":"no-store","X-Content-Type-Options":"nosniff","X-Frame-Options":"DENY",
+            "Referrer-Policy":"no-referrer","Content-Security-Policy":"default-src 'none'; frame-ancestors 'none'"
+        }.items(): self.send_header(key,value)
+        if status==401: self.send_header("WWW-Authenticate","Bearer")
+        self.end_headers(); self.wfile.write(data)
     def authorized(self):
-        token=os.getenv("JAHIDS_API_TOKEN","")
-        return bool(token) and hmac.compare_digest(self.headers.get("Authorization",""),"Bearer "+token)
+        return self.authenticator is not None and self.authenticator.authenticate(self.headers.get("Authorization"))
     def body(self):
-        length=int(self.headers.get("Content-Length","0"))
-        if length<0 or length>16000: raise ValueError("body must be at most 16000 bytes")
-        if length == 0: return {}
+        try: length=int(self.headers.get("Content-Length","0"))
+        except (TypeError,ValueError) as exc: raise ValueError("invalid Content-Length") from exc
+        if length<0 or length>16000: raise ValueError("request body exceeds 16000 bytes")
+        if length==0: return {}
         payload=json.loads(self.rfile.read(length))
         if not isinstance(payload,dict): raise ValueError("JSON body must be an object")
         return payload
     def do_GET(self):
         path=urlparse(self.path).path
-        if path=="/healthz": return self.send_json(200,{"status":"ok","service":"jahids-agent-runtime","version":"0.1.0"})
+        if path=="/healthz":
+            return self.send_json(200,{"status":"ok","service":"jahids-agent-runtime","version":"0.1.0"})
         if not self.authorized(): return self.send_json(401,{"error":"unauthorized"})
         if path=="/v1/missions": return self.send_json(200,{"missions":self.service.store.list()})
         if path.startswith("/v1/missions/"):
@@ -56,12 +59,15 @@ class Handler(BaseHTTPRequestHandler):
         print("jahids-runtime",self.address_string(),fmt%args)
 
 def main():
-    host=os.getenv("JAHIDS_HOST","127.0.0.1")
-    port=int(os.getenv("JAHIDS_PORT","8787"))
+    try: Handler.authenticator=OwnerAuthenticator.from_environment()
+    except RuntimeError as exc: raise SystemExit(str(exc)) from exc
+    host=os.getenv("JAHIDS_HOST","127.0.0.1"); port=int(os.getenv("JAHIDS_PORT","8787"))
     if host not in {"127.0.0.1","localhost"} and os.getenv("JAHIDS_ALLOW_REMOTE_BIND")!="true":
-        raise SystemExit("remote bind blocked; enable only behind TLS/reverse proxy")
+        raise SystemExit("remote bind blocked; expose only behind a trusted TLS reverse proxy")
     server=ThreadingHTTPServer((host,port),Handler)
-    print("JAHIDS.AI Agent Runtime listening on http://"+host+":"+str(port))
-    server.serve_forever()
+    print("JAHIDS.AI Agent Runtime listening on "+host+":"+str(port))
+    try: server.serve_forever()
+    except KeyboardInterrupt: pass
+    finally: server.server_close()
 
 if __name__=="__main__": main()
