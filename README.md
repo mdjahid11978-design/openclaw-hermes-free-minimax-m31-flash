@@ -20,6 +20,12 @@ This repository contains setup scripts for OpenClaw and Hermes Agent, plus an op
        # or, in a separate terminal:
        ./scripts/run-hermes.sh
 
+## JAHIDS.AI Control Center
+- Start the optional runtime and open `http://127.0.0.1:8787/` for the responsive web dashboard.
+- Manage missions, request approvals, inspect Governor policy, and review configured agent adapters.
+- Setup and security guide: [docs/CONTROL-CENTER.md](docs/CONTROL-CENTER.md).
+- The UI uses the owner token for API calls; it does not store provider credentials or change Governor autonomy.
+
 ## Authentication and security
 - NVIDIA credentials use `NVIDIA_API_KEY`; they are not written into tracked model configuration.
 - The optional JAHIDS runtime has a separate single-owner `JAHIDS_API_TOKEN`.
@@ -34,6 +40,7 @@ This repository contains setup scripts for OpenClaw and Hermes Agent, plus an op
 - `scripts/run-hermes.sh` — launches Hermes.
 - `config/openclaw-m31-flash.patch.json5` — provider/model configuration; no API key.
 - `runtime/` — mission API, owner authentication, Governor, SQLite store, adapters, Docker setup, and tests.
+- `web/` — JAHIDS.AI responsive Control Center UI served by the runtime.
 - `docs/` — setup and ownership documentation.
 
 ## Verify
