@@ -1,4 +1,5 @@
 """SQLite mission persistence; provider secrets are never stored."""
+import json
 import os
 import sqlite3
 import threading
@@ -21,6 +22,13 @@ class MissionStore:
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
         return db
+    @staticmethod
+    def decode(row):
+        if not row: return None
+        result = dict(row)
+        if result.get("result"):
+            result["result"] = json.loads(result["result"])
+        return result
     def create(self, mission):
         now = datetime.now(timezone.utc).isoformat()
         row = {**mission, "status":"pending_approval", "approval_id":None, "result":None, "error":None, "created_at":now, "updated_at":now}
@@ -31,18 +39,18 @@ class MissionStore:
     def get(self, mission_id):
         with self.lock, self.connect() as db:
             row = db.execute("SELECT * FROM missions WHERE id=?", (mission_id,)).fetchone()
-        return dict(row) if row else None
+        return self.decode(row)
     def list(self, limit=50):
         with self.lock, self.connect() as db:
             rows = db.execute("SELECT * FROM missions ORDER BY created_at DESC LIMIT ?", (min(max(limit,1),100),)).fetchall()
-        return [dict(row) for row in rows]
+        return [self.decode(row) for row in rows]
     def update(self, mission_id, **fields):
         allowed = {"status", "approval_id", "result", "error"}
         if not fields or not set(fields).issubset(allowed):
             raise ValueError("invalid mission update fields")
         fields["updated_at"] = datetime.now(timezone.utc).isoformat()
         assignments = ", ".join(key + "=?" for key in fields)
-        values = [__import__("json").dumps(value) if key == "result" and value is not None else value for key,value in fields.items()]
+        values = [json.dumps(value) if key == "result" and value is not None else value for key,value in fields.items()]
         with self.lock, self.connect() as db:
             db.execute("UPDATE missions SET " + assignments + " WHERE id=?", (*values, mission_id))
         return self.get(mission_id)
