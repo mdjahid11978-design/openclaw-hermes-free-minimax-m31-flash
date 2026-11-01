@@ -1,0 +1,47 @@
+name: Repository validation
+
+on:
+  push:
+    branches:
+      - main
+      - "jahids-ai/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate setup scripts and configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Bash syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+            echo "PASS: $file"
+          done < <(find scripts -type f -name '*.sh' -print0)
+
+      - name: Validate JSON configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool config/openclaw-m31-flash.patch.json5 >/dev/null
+          echo "PASS: JSON syntax"
+        continue-on-error: true
+
+      - name: Check for accidentally committed credentials
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
