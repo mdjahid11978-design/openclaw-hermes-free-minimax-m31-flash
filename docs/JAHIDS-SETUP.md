@@ -1,59 +1,49 @@
 # JAHIDS.AI Setup & Operations
 
-This repository provides scripts to install and configure OpenClaw and Hermes Agent
-with MiniMax M3.1 Flash via NVIDIA NIM.
+This repository installs and configures OpenClaw and Hermes Agent with MiniMax M3.1 Flash via NVIDIA NIM, and includes an optional local mission API.
 
 ## Requirements
-
-- Linux x86_64 (the Node download in this repo targets linux-x64)
+- Linux x86_64
 - `bash`, `curl`, `git`, `tar`, `python3`
-- Network access to Node.js, npm, NVIDIA NIM, and Hermes installer hosts
-- NVIDIA API key: https://build.nvidia.com/settings/api-keys
+- Network access to Node.js, npm, NVIDIA NIM, and the Hermes installer host
+- NVIDIA API key if you intend to call NIM: https://build.nvidia.com/settings/api-keys
 
 ## Install
-
 From the repository root:
+    chmod +x scripts/*.sh
+    ./scripts/setup.sh
 
-```bash
-chmod +x scripts/*.sh
-./scripts/setup.sh
-```
+The installer uses `$HOME/tools/node24`, `$HOME/openclaw-state`, and `$HOME/.hermes`. It does not require provider credentials in tracked config files.
 
-Then supply the key securely in your shell (do not paste it into GitHub issues or commit it):
+## Provider authentication
+Use a hidden prompt so the key is not written into shell history:
+    read -rsp "NVIDIA API key: " NVIDIA_API_KEY
+    echo
+    export NVIDIA_API_KEY
 
-```bash
-export NVIDIA_API_KEY="nvapi-…"
-./scripts/run-openclaw.sh
-# In a separate terminal:
-./scripts/run-hermes.sh
-```
+Then launch:
+    ./scripts/run-openclaw.sh
+
+In a separate terminal, repeat the secure prompt/export and run:
+    ./scripts/run-hermes.sh
 
 For a one-shot Hermes request:
+    ./scripts/run-hermes.sh -z "Reply with a short greeting"
 
-```bash
-./scripts/run-hermes.sh -z "Reply with a short greeting"
-```
+Never paste API keys into GitHub, chat, issue comments, screenshots, or source files. Revoke and replace an exposed key.
 
 ## Verify
+`./scripts/setup.sh --verify` is read-only. It checks installed binaries and model configuration without installing or changing anything.
+    ./scripts/setup.sh --verify
+    bash -n scripts/setup.sh scripts/run-openclaw.sh scripts/run-hermes.sh
 
-```bash
-./scripts/setup.sh --verify
-bash -n scripts/setup.sh scripts/run-openclaw.sh scripts/run-hermes.sh
-```
+GitHub Actions validates Python tests, shell syntax, JSON5 syntax, and scans for exposed secrets. It cannot test your private provider key or install software on your host.
 
-The GitHub Actions validation workflow checks shell syntax and scans commits
-for exposed secrets. It cannot install services on your personal device or
-validate your private NVIDIA key.
+## Optional JAHIDS mission API
+See [runtime/README.md](../runtime/README.md) and [Authentication and Ownership](AUTHENTICATION-AND-OWNERSHIP.md). The API has a separate owner token, defaults to observe-only autonomy, and listens on loopback.
 
-## Safe automation boundary
+## Automation boundary
+Review commands and permissions before running agents. Do not enable unattended host shell, messaging, browser, or file tools without explicit policy and a sandbox.
 
-The scripts install software and modify local OpenClaw/Hermes configuration.
-Review the requested permissions and commands before running them. Do not enable
-unattended execution of host shell, messaging, browser, or file tools without
-an explicit policy and sandbox.
-
-## Free-tier note
-
-NVIDIA NIM free endpoints may impose rate limits, availability restrictions,
-and trial/evaluation terms. No fallback to a paid provider is configured by
-default. Review NVIDIA's current terms before commercial or production use.
+## Provider terms and pricing
+NVIDIA controls endpoint availability, rate limits, trial terms, and pricing. Confirm current terms in your NVIDIA account before production or commercial use. No paid fallback is configured by default.
