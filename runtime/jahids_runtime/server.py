@@ -96,16 +96,7 @@ class Handler(BaseHTTPRequestHandler):
                     "autonomy_level": self.service.governor.autonomy_level,
                     "allowed_categories": ["model", "read", "analysis"],
                     "blocked_categories": sorted(self.service.governor.BLOCKED_CATEGORIES),
-                    "smtp_configured": all(
-                        os.getenv(name, "").strip()
-                        for name in (
-                            "JAHIDS_SMTP_HOST",
-                            "JAHIDS_SMTP_USERNAME",
-                            "JAHIDS_SMTP_PASSWORD",
-                            "JAHIDS_EMAIL_FROM",
-                            "JAHIDS_EMAIL_ALLOWED_RECIPIENTS",
-                        )
-                    ),
+                    "smtp_configured": SmtpMailer().is_configured(),
                 },
             )
         if path == "/v1/missions":

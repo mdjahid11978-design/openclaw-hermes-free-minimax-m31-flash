@@ -49,6 +49,22 @@ class SmtpMailerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SmtpMailer(self.env).send("owner@example.test", "", "Body")
 
+    def test_readiness_requires_valid_complete_configuration(self):
+        self.assertTrue(SmtpMailer(self.env).is_configured())
+
+    def test_readiness_rejects_invalid_port_security_and_empty_allowlist(self):
+        for key, value in (
+            ("JAHIDS_SMTP_PORT", "not-a-port"),
+            ("JAHIDS_SMTP_PORT", "70000"),
+            ("JAHIDS_SMTP_SECURITY", "plain"),
+            ("JAHIDS_EMAIL_ALLOWED_RECIPIENTS", ""),
+            ("JAHIDS_EMAIL_ALLOWED_RECIPIENTS", "not-an-email"),
+        ):
+            env = dict(self.env)
+            env[key] = value
+            with self.subTest(key=key, value=value):
+                self.assertFalse(SmtpMailer(env).is_configured())
+
 
 if __name__ == "__main__":
     unittest.main()

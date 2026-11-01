@@ -17,6 +17,32 @@ class SmtpMailer:
     def __init__(self, environ=None):
         self.env = environ if environ is not None else os.environ
 
+    def is_configured(self):
+        """Return a non-secret readiness check for the SMTP relay configuration."""
+        host = self.env.get("JAHIDS_SMTP_HOST", "").strip()
+        sender = self.env.get("JAHIDS_EMAIL_FROM", "").strip()
+        username = self.env.get("JAHIDS_SMTP_USERNAME", "").strip()
+        password = self.env.get("JAHIDS_SMTP_PASSWORD", "")
+        mode = self.env.get("JAHIDS_SMTP_SECURITY", "ssl").lower()
+        try:
+            port = int(self.env.get("JAHIDS_SMTP_PORT", "465"))
+        except (TypeError, ValueError):
+            return False
+        allowed = {
+            item.strip()
+            for item in self.env.get("JAHIDS_EMAIL_ALLOWED_RECIPIENTS", "").split(",")
+            if item.strip()
+        }
+        sender_address = parseaddr(sender)[1]
+        valid_sender = sender_address == sender and "@" in sender
+        valid_recipients = bool(allowed) and all(
+            parseaddr(item)[1] == item and "@" in item for item in allowed
+        )
+        return bool(
+            host and username and password and valid_sender and valid_recipients
+            and 1 <= port <= 65535 and mode in {"ssl", "starttls"}
+        )
+
     def send(self, recipient, subject, text_body):
         if not all(isinstance(value, str) for value in (recipient, subject, text_body)):
             raise ValueError("to, subject, and text must be strings")
